@@ -29,6 +29,8 @@ else:
     logger.info("TELEGRAM_BOT_TOKEN is set")
 domain = os.getenv("DOMAIN")
 logger.info(f"DOMAIN is set to: {domain}")
+admin_id = os.getenv("ADMIN_ID")
+logger.info(f"ADMIN_ID is set to: {admin_id}")
 
 # Initialize database
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -55,7 +57,8 @@ async def main():
     bot_instance = PodcastBot(
         token=token,
         domain=domain,
-        session=Session()
+        session=Session(),
+        admin_id=int(admin_id)
     )
 
     # Создаем сервер

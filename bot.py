@@ -11,6 +11,7 @@ import logging
 import re
 import unicodedata
 from utils import process_podcast_cover
+import mutagen
 
 # Configure logging
 logging.basicConfig(
@@ -21,13 +22,14 @@ logger = logging.getLogger(__name__)
 
 
 class PodcastBot:
-    def __init__(self, token: str, domain: str, session: Session):
+    def __init__(self, token: str, domain: str, session: Session, admin_id: int):
         logger.info("Initializing PodcastBot...")
         try:
             self.application = Application.builder().token(token).build()
             logger.debug("Application builder created successfully")
             self.domain = domain
             self.session = session
+            self.admin_id = admin_id
             self.setup_handlers()
             logger.info("PodcastBot initialized successfully")
         except Exception as e:
@@ -45,6 +47,8 @@ class PodcastBot:
             self.application.add_handler(CommandHandler("setimage", self.set_image_command))
             self.application.add_handler(MessageHandler(filters.PHOTO, self.handle_image))
             self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_youtube_url))
+            # Admin commands    
+            self.application.add_handler(CommandHandler("stat", self.stat_command))
             logger.info("Message handlers setup completed")
         except Exception as e:
             logger.error(f"Error setting up handlers: {e}", exc_info=True)
@@ -76,9 +80,38 @@ class PodcastBot:
             logger.error(f"Error stopping bot: {e}", exc_info=True)
             raise
 
+    async def _process_and_save_image(self, image_bytes: bytes, user: User, username: str) -> bool:
+        """Process and save podcast cover image
+        
+        Args:
+            image_bytes: Raw image bytes
+            user: User object
+            username: Username to display on the cover
+            
+        Returns:
+            bool: True if image was processed and saved successfully
+        """
+        try:
+            # Process the image
+            processed_image = process_podcast_cover(image_bytes, f'@{username}')
+            
+            # Save the modified image
+            os.makedirs(f"data/{user.uuid}", exist_ok=True)
+            with open(f"data/{user.uuid}/image.jpg", "wb") as f:
+                f.write(processed_image)
+            
+            user.image = True
+            self.session.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Error processing image: {e}", exc_info=True)
+            return False
+
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /start command"""
         user = self.session.query(User).filter_by(telegram_id=update.effective_user.id).first()
+        is_new_user = False
+        
         if not user:
             user = User(
                 telegram_id=update.effective_user.id,
@@ -87,6 +120,20 @@ class PodcastBot:
             )
             self.session.add(user)
             self.session.commit()
+            is_new_user = True
+            
+        # Try to get user's profile photo
+        try:
+            photos = await update.effective_user.get_profile_photos(limit=1)
+            if photos and photos.photos:
+                # Get the largest photo
+                photo = photos.photos[0][-1]
+                photo_file = await photo.get_file()
+                image_bytes = await photo_file.download_as_bytearray()
+                
+                await self._process_and_save_image(image_bytes, user, update.effective_user.username)
+        except Exception as e:
+            logger.error(f"Error setting default image from avatar: {e}", exc_info=True)
             
         welcome_text = (
             "🎙 *Welcome to YouTube to Podcast Bot!*\n\n"
@@ -95,6 +142,22 @@ class PodcastBot:
             "or use ❓ `/help` - Show help message\n"
         )
         await update.message.reply_text(welcome_text, parse_mode='Markdown')
+
+        # Notify admin about new user
+        if is_new_user and self.admin_id:
+            try:
+                admin_notification = (
+                    "🆕 *New User Joined*\n\n"
+                    f"👤 User: @{update.effective_user.username or 'Unknown'}\n"
+                    f"🆔 ID: `{update.effective_user.id}`"
+                )
+                await context.bot.send_message(
+                    chat_id=self.admin_id,
+                    text=admin_notification,
+                    parse_mode='Markdown'
+                )
+            except Exception as e:
+                logger.error(f"Error sending admin notification: {e}", exc_info=True)
 
     async def feed_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /feed command"""
@@ -249,12 +312,17 @@ class PodcastBot:
                     await update.message.reply_text("Error: Downloaded file not found")
                     return
 
+                # Process the audio file
+                audio = mutagen.File(file_path)
+                duration = str(int(audio.info.length))
+
                 # Save to database
                 track = Track(
                     user_id=user.id,
                     title=title,
                     youtube_url=update.message.text,
-                    file_name=f"{video_id}.mp3"
+                    file_name=f"{video_id}.mp3",
+                    duration=duration
                 )
                 self.session.add(track)
                 self.session.commit()
@@ -281,22 +349,18 @@ class PodcastBot:
             # Download the image
             image_bytes = await photo.download_as_bytearray()
             
-            # Process the image
-            processed_image = process_podcast_cover(image_bytes, f'@{update.effective_user.username}')
+            # Process and save the image
+            success = await self._process_and_save_image(image_bytes, user, update.effective_user.username)
             
-            # Save the modified image
-            os.makedirs(f"data/{user.uuid}", exist_ok=True)
-            with open(f"data/{user.uuid}/image.jpg", "wb") as f:
-                f.write(processed_image)
-            
-            user.image = True
-            self.session.commit()
-            
-            await update.message.reply_text(
-                "✅ *Image set as podcast cover!*\n\n"
-                "Your podcast feed will now show this image as the cover.",
-                parse_mode='Markdown'
-            )
+            if success:
+                await update.message.reply_text(
+                    "✅ *Image set as podcast cover!*\n\n"
+                    "Your podcast feed will now show this image as the cover.",
+                    parse_mode='Markdown'
+                )
+            else:
+                raise Exception("Failed to process image")
+                
         except Exception as e:
             logger.error(f"Error setting image: {e}", exc_info=True)
             await update.message.reply_text(
@@ -305,7 +369,7 @@ class PodcastBot:
                 parse_mode='Markdown'
             )
         finally:
-            context.user_data['waiting_for_image'] = False 
+            context.user_data['waiting_for_image'] = False
 
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /help command"""
@@ -328,4 +392,26 @@ class PodcastBot:
             help_text,
             parse_mode='Markdown',
             disable_web_page_preview=True
-        ) 
+        )
+
+    async def stat_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /stat command - show statistics for admin"""
+        logger.info(f"Admin ID: {self.admin_id}")
+        if update.effective_user.id != self.admin_id:
+            #await update.message.reply_text("❌ Access denied")
+            return
+
+        # Get all users with their track counts
+        users = self.session.query(User).all()
+        stats = []
+        
+        for user in users:
+            track_count = self.session.query(Track).filter_by(user_id=user.id).count()
+            stats.append(f"👤 @{user.username or 'Unknown'} (ID: {user.telegram_id}): {track_count} tracks")
+        
+        if not stats:
+            await update.message.reply_text("No users found")
+            return
+            
+        message = "📊 *Bot Statistics*\n\n" + "\n".join(stats)
+        await update.message.reply_text(message, parse_mode='Markdown') 

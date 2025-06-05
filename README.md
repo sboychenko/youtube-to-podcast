@@ -193,6 +193,8 @@ The project consists of two main components:
 ```
 sudo nginx -t
 sudo systemctl reload nginx
+nginx -s reload
+tail -f /var/log/nginx/error.log
 ```
 
 
@@ -211,4 +213,10 @@ docker exec -it <container_name> bash
 Внутри контейнера выполните:
 ```
 psql -U postgres123 -d podcast
+```
+
+Смотреть логи
+```
+docker ps
+docker logs -f -t youtube-to-podcast-bot_app_1
 ```

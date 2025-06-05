@@ -10,7 +10,6 @@ from sqlalchemy.orm import sessionmaker
 import logging
 
 logger = logging.getLogger(__name__)
-
 app = FastAPI()
 
 # Initialize database and create session factory
@@ -26,22 +25,35 @@ def get_db():
         db.close()
 
 def create_rss_feed(user: User, tracks: list[Track], domain: str) -> str:
-    rss = ET.Element("rss", version="2.0")
+    rss = ET.Element("rss", version="2.0", 
+                    attrib={"xmlns:itunes": "http://www.itunes.com/dtds/podcast-1.0.dtd",
+                           "xmlns:content": "http://purl.org/rss/1.0/modules/content/"})
     channel = ET.SubElement(rss, "channel")
     
+    # Основные теги
     ET.SubElement(channel, "title").text = f"Podcast Feed by @{user.username}"
-    ET.SubElement(channel, "link").text = f"https://app.sboychenko.ru"
-    ET.SubElement(channel, "author").text = f"t.me/{user.username}"
+    ET.SubElement(channel, "link").text = f"https://app.sboychenko.ru/y2p"
     ET.SubElement(channel, "description").text = "Create with tg bot @YouTubeToPodcastBot"
     ET.SubElement(channel, "language").text = "ru-ru"
     ET.SubElement(channel, "lastBuildDate").text = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
+    
+    # iTunes специфичные теги
+    ET.SubElement(channel, "itunes:author").text = f"{user.username}"
+    ET.SubElement(channel, "itunes:summary").text = "Create with tg bot @YouTubeToPodcastBot"
+    ET.SubElement(channel, "itunes:explicit").text = "no"
+    ET.SubElement(channel, "itunes:category", text="Other")
+    ET.SubElement(channel, "itunes:owner")
+    ET.SubElement(channel.find("itunes:owner"), "itunes:name").text = f"{user.username}"
+    #ET.SubElement(channel.find("itunes:owner"), "itunes:email").text = "your-email@example.com"  # Можно добавить в модель User
 
-    # Добавляем тег <image>, если у пользователя есть обложка
+    # Обложка подкаста
     if user.image:
         image = ET.SubElement(channel, "image")
-        ET.SubElement(image, "url").text = f"http://{domain}/image/{user.uuid}.jpg"
+        ET.SubElement(image, "url").text = f"https://{domain}/image/{user.uuid}.jpg"
         ET.SubElement(image, "title").text = f"Podcast Feed for User {user.telegram_id}"
-        ET.SubElement(image, "link").text = f"http://{domain}/rss/{user.uuid}"
+        ET.SubElement(image, "link").text = f"https://{domain}/rss/{user.uuid}"
+        # iTunes обложка
+        ET.SubElement(channel, "itunes:image", href=f"https://{domain}/image/{user.uuid}.jpg")
 
     for track in tracks:
         item = ET.SubElement(channel, "item")
@@ -51,8 +63,14 @@ def create_rss_feed(user: User, tracks: list[Track], domain: str) -> str:
         ET.SubElement(item, "pubDate").text = track.created_at.strftime("%a, %d %b %Y %H:%M:%S GMT")
         ET.SubElement(item, "guid").text = track.file_name
         
+        # iTunes специфичные теги для каждого эпизода
+        ET.SubElement(item, "itunes:author").text = f"{user.username}"
+        ET.SubElement(item, "itunes:summary").text = f"Audio from {track.youtube_url}"
+        ET.SubElement(item, "itunes:explicit").text = "no"
+        ET.SubElement(item, "itunes:duration").text = f"{track.duration}"  # Можно добавить длительность в модель Track
+        
         enclosure = ET.SubElement(item, "enclosure")
-        enclosure.set("url", f"http://{domain}/audio/{user.uuid}/{track.file_name}")
+        enclosure.set("url", f"https://{domain}/audio/{user.uuid}/{track.file_name}")
         enclosure.set("type", "audio/mpeg")
         enclosure.set("length", str(os.path.getsize(f"data/{user.uuid}/{track.file_name}")))
 
