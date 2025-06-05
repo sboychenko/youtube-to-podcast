@@ -132,10 +132,10 @@ class PodcastBot:
             
         message = "📋 *Your Podcast Feed*\n\n"
         for i, track in enumerate(tracks, 1):
-            message += f"{i}. {track.title}\n"
+            message += f"{i}. {track.title} - [(YouTube)]({track.youtube_url})\n"
             
         message += "\nUse /delete to remove videos from your feed."
-        await update.message.reply_text(message, parse_mode='Markdown')
+        await update.message.reply_text(message, parse_mode='Markdown', disable_web_page_preview=True)
 
     async def delete_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /delete command"""
