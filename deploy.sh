@@ -55,6 +55,7 @@ ssh -i $REMOTE_KEY $REMOTE_USER@$REMOTE_HOST << EOF
     docker-compose -f $COMPOSE_FILE ps
 
     rm $IMAGE_NAME.tar.gz
+    docker image prune -f
 EOF
 
 # Очистка локальных файлов
