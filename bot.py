@@ -104,7 +104,7 @@ class PodcastBot:
             return
             
         domain = os.getenv("DOMAIN")
-        rss_url = f"http://{domain}/rss/{user.uuid}"
+        rss_url = f"https://{domain}/rss/{user.uuid}"
         
         await update.message.reply_text(
             f"🎵 *Your Podcast RSS Feed*\n\n"
