@@ -8,9 +8,8 @@ import uuid
 import asyncio
 from datetime import datetime
 import logging
-import re
-import unicodedata
 from utils import process_podcast_cover, calculate_user_storage, format_size
+from locales import get_text
 import mutagen
 
 # Configure logging
@@ -19,6 +18,11 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+def get_lang(update: Update) -> str:
+    """Get user's language code or default to 'en'"""
+    return update.effective_user.language_code or 'en'
 
 
 class PodcastBot:
@@ -138,29 +142,15 @@ class PodcastBot:
         domain = os.getenv("DOMAIN")
         rss_url = f"https://{domain}/rss/{user.uuid}"
             
-        welcome_text = (
-            "🎙 *Welcome to YouTube to Podcast Bot!*\n\n"
-            "I'll help you create your own podcast feed from YouTube videos.\n\n"
-            "📝 *Quick Start Guide:*\n"
-            "1. Send me any YouTube video URL\n"
-            "2. I'll convert it to podcast format\n"
-            "3. Add this RSS feed to your podcast app (ex. Apple Podcasts):\n"
-            f"`{rss_url}`\n\n"
-            "🎨 *Customization:*\n"
-            "• Use /setimage to set your own podcast cover\n"
-            "• Use /list to see your videos\n"
-            "• Use /delete to remove videos\n\n"
-            "❓ Use /help for more information"
-        )
+        welcome_text = get_text(get_lang(update), 'welcome', rss_url=rss_url)
         await update.message.reply_text(welcome_text, parse_mode='Markdown')
 
         # Notify admin about new user
         if is_new_user and self.admin_id:
             try:
-                admin_notification = (
-                    "🆕 *New User Joined*\n\n"
-                    f"👤 User: @{update.effective_user.username or 'Unknown'}\n"
-                    f"🆔 ID: `{update.effective_user.id}`"
+                admin_notification = get_text(get_lang(update), 'new_user_notification',
+                    username=update.effective_user.username or 'Unknown',
+                    user_id=update.effective_user.id
                 )
                 await context.bot.send_message(
                     chat_id=self.admin_id,
@@ -174,17 +164,14 @@ class PodcastBot:
         """Handle /feed command"""
         user = self.session.query(User).filter_by(telegram_id=update.effective_user.id).first()
         if not user:
-            await update.message.reply_text("❌ Please use /start first")
+            await update.message.reply_text(get_text(get_lang(update), 'start_first'))
             return
             
         domain = os.getenv("DOMAIN")
         rss_url = f"https://{domain}/rss/{user.uuid}"
         
         await update.message.reply_text(
-            f"🎵 *Your Podcast RSS Feed*\n\n"
-            f"Add this URL to your podcast app:\n"
-            f"`{rss_url}`\n\n"
-            f"*Note:* Make sure to add a cover image using /setimage for better appearance!",
+            get_text(get_lang(update), 'feed', rss_url=rss_url),
             parse_mode='Markdown'
         )
 
@@ -192,37 +179,42 @@ class PodcastBot:
         """Handle /list command"""
         user = self.session.query(User).filter_by(telegram_id=update.effective_user.id).first()
         if not user:
-            await update.message.reply_text("❌ Please use /start first")
+            await update.message.reply_text(get_text(get_lang(update), 'start_first'))
             return
             
         tracks = self.session.query(Track).filter_by(user_id=user.id).order_by(Track.created_at.desc()).all()
         if not tracks:
             await update.message.reply_text(
-                "📭 *Your feed is empty*\n\n"
-                "Send me a YouTube URL to add your first video!",
+                get_text(get_lang(update), 'list_empty'),
                 parse_mode='Markdown'
             )
             return
             
-        message = "📋 *Your Podcast Feed*\n\n"
+        tracks_text = []
         for i, track in enumerate(tracks, 1):
-            message += f"{i}. {track.title} - [(YouTube)]({track.youtube_url})\n"
+            tracks_text.append(get_text(get_lang(update), 'track_item',
+                number=i,
+                title=track.title,
+                url=track.youtube_url
+            ))
             
-        message += "\nUse /delete to remove videos from your feed."
-        await update.message.reply_text(message, parse_mode='Markdown', disable_web_page_preview=True)
+        await update.message.reply_text(
+            get_text(get_lang(update), 'list', tracks='\n'.join(tracks_text)),
+            parse_mode='Markdown',
+            disable_web_page_preview=True
+        )
 
     async def delete_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /delete command"""
         user = self.session.query(User).filter_by(telegram_id=update.effective_user.id).first()
         if not user:
-            await update.message.reply_text("❌ Please use /start first")
+            await update.message.reply_text(get_text(get_lang(update), 'start_first'))
             return
             
         tracks = self.session.query(Track).filter_by(user_id=user.id).order_by(Track.created_at.desc()).all()
         if not tracks:
             await update.message.reply_text(
-                "📭 *Your feed is empty*\n\n"
-                "Send me a YouTube URL to add your first video!",
+                get_text(get_lang(update), 'list_empty'),
                 parse_mode='Markdown'
             )
             return
@@ -230,24 +222,25 @@ class PodcastBot:
         try:
             track_num = int(context.args[0])
         except (IndexError, ValueError):
-            message = (
-                "❌ *Invalid command format*\n\n"
-                "Usage: `/delete <number>`\n\n"
-                "*Your videos:*\n"
-            )
+            tracks_text = []
             for i, track in enumerate(tracks, 1):
-                message += f"{i}. {track.title}\n"
-            await update.message.reply_text(message, parse_mode='Markdown')
+                tracks_text.append(f"{i}. {track.title}")
+            
+            await update.message.reply_text(
+                get_text(get_lang(update), 'delete_invalid', tracks='\n'.join(tracks_text)),
+                parse_mode='Markdown'
+            )
             return
 
         if not 1 <= track_num <= len(tracks):
-            message = (
-                "❌ *Invalid video number*\n\n"
-                "Please choose a number from the list:\n"
-            )
+            tracks_text = []
             for i, track in enumerate(tracks, 1):
-                message += f"{i}. {track.title}\n"
-            await update.message.reply_text(message, parse_mode='Markdown')
+                tracks_text.append(f"{i}. {track.title}")
+            
+            await update.message.reply_text(
+                get_text(get_lang(update), 'delete_invalid_number', tracks='\n'.join(tracks_text)),
+                parse_mode='Markdown'
+            )
             return
             
         track = tracks[track_num - 1]
@@ -261,8 +254,7 @@ class PodcastBot:
         self.session.commit()
         
         await update.message.reply_text(
-            f"✅ *Video deleted successfully!*\n\n"
-            f"Removed: *{track.title}*",
+            get_text(get_lang(update), 'delete_success', title=track.title),
             parse_mode='Markdown'
         )
 
@@ -270,13 +262,12 @@ class PodcastBot:
         """Handle /setimage command"""
         user = self.session.query(User).filter_by(telegram_id=update.effective_user.id).first()
         if not user:
-            await update.message.reply_text("❌ Please use /start first")
+            await update.message.reply_text(get_text(get_lang(update), 'start_first'))
             return
             
         context.user_data['waiting_for_image'] = True
         await update.message.reply_text(
-            "🖼 *Send me an image to use as your podcast cover*\n\n"
-            "The image will be resized and text will be added automatically.",
+            get_text(get_lang(update), 'setimage_prompt'),
             parse_mode='Markdown'
         )
 
@@ -286,10 +277,10 @@ class PodcastBot:
 
         user = self.session.query(User).filter_by(telegram_id=update.effective_user.id).first()
         if not user:
-            await update.message.reply_text("Please use /start first.")
+            await update.message.reply_text(get_text(get_lang(update), 'start_first'))
             return
 
-        await update.message.reply_text("Downloading and processing your video...")
+        await update.message.reply_text(get_text(get_lang(update), 'download_start'))
 
         # Create user directory if it doesn't exist
         user_dir = f"data/{user.uuid}"
@@ -320,7 +311,7 @@ class PodcastBot:
                 # Check if the original file exists
                 if not os.path.exists(file_path):
                     logger.error(f"Original file not found: {file_path}")
-                    await update.message.reply_text("Error: Downloaded file not found")
+                    await update.message.reply_text(get_text(get_lang(update), 'download_error', error="Downloaded file not found"))
                     return
 
                 # Process the audio file
@@ -338,10 +329,10 @@ class PodcastBot:
                 self.session.add(track)
                 self.session.commit()
 
-                await update.message.reply_text(f"Successfully added '{title}' to your podcast feed!")
+                await update.message.reply_text(get_text(get_lang(update), 'download_success', title=title))
         except Exception as e:
             logger.error(f"Error processing video: {e}", exc_info=True)
-            await update.message.reply_text(f"Error processing video: {str(e)}")
+            await update.message.reply_text(get_text(get_lang(update), 'download_error', error=str(e)))
 
     async def handle_image(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle image upload - save as podcast cover"""
@@ -350,7 +341,7 @@ class PodcastBot:
 
         user = self.session.query(User).filter_by(telegram_id=update.effective_user.id).first()
         if not user:
-            await update.message.reply_text("❌ Please use /start first")
+            await update.message.reply_text(get_text(get_lang(update), 'start_first'))
             return
 
         try:
@@ -365,8 +356,7 @@ class PodcastBot:
             
             if success:
                 await update.message.reply_text(
-                    "✅ *Image set as podcast cover!*\n\n"
-                    "Your podcast feed will now show this image as the cover.",
+                    get_text(get_lang(update), 'setimage_success'),
                     parse_mode='Markdown'
                 )
             else:
@@ -375,8 +365,7 @@ class PodcastBot:
         except Exception as e:
             logger.error(f"Error setting image: {e}", exc_info=True)
             await update.message.reply_text(
-                "❌ *Error setting image*\n\n"
-                "Please try again or use a different image.",
+                get_text(get_lang(update), 'setimage_error'),
                 parse_mode='Markdown'
             )
         finally:
@@ -384,37 +373,14 @@ class PodcastBot:
 
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /help command"""
-        help_text = (
-            "🤖 *YouTube to Podcast Bot - Detailed Guide*\n\n"
-            "This bot helps you create your own podcast feed from YouTube videos. Here's how to use it:\n\n"
-            "📱 *Getting Started*\n"
-            "1. Send any YouTube video URL to the bot\n"
-            "2. The bot will automatically download and convert it to podcast format\n"
-            "3. Add your RSS feed (use /feed command) to your favorite podcast app\n\n"
-            "🎨 *Customizing Your Podcast*\n"
-            "• Set your own podcast cover using /setimage\n"
-            "• The cover will be automatically resized and optimized\n"
-            "• You can change the cover anytime\n\n"
-            "📋 *Managing Your Content*\n"
-            "• Use /list to see all videos in your feed\n"
-            "• Use /delete to remove unwanted videos\n"
-            "• Videos are processed in high quality (192kbps)\n\n"
-            "📝 *Available Commands:*\n"
-            "• `/start` - Start the bot and get your RSS feed\n"
-            "• `/setimage` - Set your podcast cover image\n"
-            "• `/list` - Show list of added videos\n"
-            "• `/delete` - Delete video from the list\n"
-            "• `/feed` - Get your podcast RSS feed\n"
-            "• `/help` - Show this help message\n\n"
-            "💡 *Tips*\n"
-            "• Your feed updates automatically when you add new videos\n\n"
-            "🌐 *Links:*\n"
-            "Web: [page on internet](https://app.sboychenko.ru)\n"
-            "Author: @sboychenko\\_life"
-        )
-        
+        logger.info(f"Help command called by {update.effective_user}")
+        user = self.session.query(User).filter_by(telegram_id=update.effective_user.id).first()
+        if not user:
+            await update.message.reply_text(get_text(get_lang(update), 'start_first'))
+            return
+            
         await update.message.reply_text(
-            help_text,
+            get_text(get_lang(update), 'help'),
             parse_mode='Markdown',
             disable_web_page_preview=True
         )
@@ -439,15 +405,18 @@ class PodcastBot:
             # Calculate total disk space used using utility function
             total_size = calculate_user_storage(user.uuid)
             
-            stats.append(
-                f"👤 @{escaped_username} (ID: {user.telegram_id}):\n"
-                f"   • Tracks: {track_count}\n"
-                f"   • Storage: {format_size(total_size)}"
-            )
+            stats.append(get_text(get_lang(update), 'stats_item',
+                username=escaped_username,
+                user_id=user.telegram_id,
+                track_count=track_count,
+                storage=format_size(total_size)
+            ))
         
         if not stats:
-            await update.message.reply_text("No users found")
+            await update.message.reply_text(get_text(get_lang(update), 'no_users'))
             return
             
-        message = "📊 *Bot Statistics*\n\n" + "\n".join(stats)
-        await update.message.reply_text(message, parse_mode='Markdown') 
+        await update.message.reply_text(
+            get_text(get_lang(update), 'stats', stats='\n'.join(stats)),
+            parse_mode='Markdown'
+        ) 
