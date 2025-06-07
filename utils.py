@@ -1,5 +1,6 @@
 from PIL import Image, ImageDraw, ImageFont
 import io
+import os
 
 def process_podcast_cover(image: bytes, username: str) -> bytes:
     """
@@ -65,3 +66,36 @@ def process_podcast_cover(image: bytes, username: str) -> bytes:
     img_byte_arr = io.BytesIO()
     result.save(img_byte_arr, format='JPEG')
     return img_byte_arr.getvalue()
+
+def calculate_user_storage(user_uuid: str) -> int:
+    """Calculate total disk space used by user's audio files
+    
+    Args:
+        user_uuid: User's UUID to find their directory
+        
+    Returns:
+        int: Total size in bytes
+    """
+    total_size = 0
+    user_dir = f"data/{user_uuid}"
+    if os.path.exists(user_dir):
+        for file in os.listdir(user_dir):
+            if file.endswith('.mp3'):
+                file_path = os.path.join(user_dir, file)
+                total_size += os.path.getsize(file_path)
+    return total_size
+
+def format_size(size_bytes: int) -> str:
+    """Convert bytes to human readable format
+    
+    Args:
+        size_bytes: Size in bytes
+        
+    Returns:
+        str: Formatted size string (e.g. "1.5 MB")
+    """
+    for unit in ['B', 'KB', 'MB', 'GB']:
+        if size_bytes < 1024.0:
+            return f"{size_bytes:.1f} {unit}"
+        size_bytes /= 1024.0
+    return f"{size_bytes:.1f} GB"

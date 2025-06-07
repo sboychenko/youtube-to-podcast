@@ -10,7 +10,7 @@ from datetime import datetime
 import logging
 import re
 import unicodedata
-from utils import process_podcast_cover
+from utils import process_podcast_cover, calculate_user_storage, format_size
 import mutagen
 
 # Configure logging
@@ -135,11 +135,22 @@ class PodcastBot:
         except Exception as e:
             logger.error(f"Error setting default image from avatar: {e}", exc_info=True)
             
+        domain = os.getenv("DOMAIN")
+        rss_url = f"https://{domain}/rss/{user.uuid}"
+            
         welcome_text = (
             "🎙 *Welcome to YouTube to Podcast Bot!*\n\n"
             "I'll help you create your own podcast feed from YouTube videos.\n\n"
-            "Just send me a YouTube video URL to add it to your podcast feed!\n"
-            "or use ❓ `/help` - Show help message\n"
+            "📝 *Quick Start Guide:*\n"
+            "1. Send me any YouTube video URL\n"
+            "2. I'll convert it to podcast format\n"
+            "3. Add this RSS feed to your podcast app (ex. Apple Podcasts):\n"
+            f"`{rss_url}`\n\n"
+            "🎨 *Customization:*\n"
+            "• Use /setimage to set your own podcast cover\n"
+            "• Use /list to see your videos\n"
+            "• Use /delete to remove videos\n\n"
+            "❓ Use /help for more information"
         )
         await update.message.reply_text(welcome_text, parse_mode='Markdown')
 
@@ -374,15 +385,29 @@ class PodcastBot:
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /help command"""
         help_text = (
-            "🤖 *YouTube to Podcast Bot*\n\n"
-            "This bot converts YouTube videos to your custom podcast feed.\n\n"
-            "📝 *Available commands:*\n"
-            "• `/start` - Start the bot\n"
-            "• `/setimage` - Set podcast cover image\n"
+            "🤖 *YouTube to Podcast Bot - Detailed Guide*\n\n"
+            "This bot helps you create your own podcast feed from YouTube videos. Here's how to use it:\n\n"
+            "📱 *Getting Started*\n"
+            "1. Send any YouTube video URL to the bot\n"
+            "2. The bot will automatically download and convert it to podcast format\n"
+            "3. Add your RSS feed (use /feed command) to your favorite podcast app\n\n"
+            "🎨 *Customizing Your Podcast*\n"
+            "• Set your own podcast cover using /setimage\n"
+            "• The cover will be automatically resized and optimized\n"
+            "• You can change the cover anytime\n\n"
+            "📋 *Managing Your Content*\n"
+            "• Use /list to see all videos in your feed\n"
+            "• Use /delete to remove unwanted videos\n"
+            "• Videos are processed in high quality (192kbps)\n\n"
+            "📝 *Available Commands:*\n"
+            "• `/start` - Start the bot and get your RSS feed\n"
+            "• `/setimage` - Set your podcast cover image\n"
             "• `/list` - Show list of added videos\n"
             "• `/delete` - Delete video from the list\n"
-            "• `/feed` - Get podcast RSS feed\n"
-            "• `/help` - Show this message\n\n"
+            "• `/feed` - Get your podcast RSS feed\n"
+            "• `/help` - Show this help message\n\n"
+            "💡 *Tips*\n"
+            "• Your feed updates automatically when you add new videos\n\n"
             "🌐 *Links:*\n"
             "Web: [page on internet](https://app.sboychenko.ru)\n"
             "Author: @sboychenko\\_life"
@@ -406,8 +431,19 @@ class PodcastBot:
         stats = []
         
         for user in users:
+            username = user.username or 'Unknown'
+            # Escape underscores in username for Markdown
+            escaped_username = username.replace('_', '\\_')
             track_count = self.session.query(Track).filter_by(user_id=user.id).count()
-            stats.append(f"👤 @{user.username or 'Unknown'} (ID: {user.telegram_id}): {track_count} tracks")
+            
+            # Calculate total disk space used using utility function
+            total_size = calculate_user_storage(user.uuid)
+            
+            stats.append(
+                f"👤 @{escaped_username} (ID: {user.telegram_id}):\n"
+                f"   • Tracks: {track_count}\n"
+                f"   • Storage: {format_size(total_size)}"
+            )
         
         if not stats:
             await update.message.reply_text("No users found")
