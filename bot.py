@@ -64,7 +64,12 @@ class PodcastBot:
             await self.application.initialize()
             await self.application.start()
             await self.application.updater.start_polling()
-            logger.info("Bot polling started successfully")
+            logger.info("Bot polling started successfully")   
+            await self.application.bot.send_message(
+                    chat_id=self.admin_id,
+                    text=get_text("en", 'start_bot'),
+                    parse_mode='Markdown'
+                ) 
             while True:
                 await asyncio.sleep(3600)
         except asyncio.CancelledError:

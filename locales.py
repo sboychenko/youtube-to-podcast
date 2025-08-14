@@ -8,6 +8,7 @@ class Locale:
 
 # English translations
 EN = {
+    'start_bot': "Bot started 🚀",
     'welcome': (
         "🎙 *Welcome to YouTube to Podcast Bot!*\n\n"
         "I'll help you create your own podcast feed from YouTube videos.\n\n"
@@ -116,6 +117,7 @@ EN = {
 
 # Russian translations
 RU = {
+    'start_bot': "Бот запущен 🚀",
     'welcome': (
         "🎙 *Добро пожаловать в YouTube to Podcast Bot!*\n\n"
         "Я помогу вам создать свой подкаст из видео с YouTube.\n\n"
