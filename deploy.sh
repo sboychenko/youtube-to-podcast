@@ -1,6 +1,6 @@
 #!/bin/bash
 # Загрузка переменных окружения
-source .env.prod
+source .env
 
 # Конфигурация
 IMAGE_NAME="youtube-to-podcast-bot"

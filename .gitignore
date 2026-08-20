@@ -33,5 +33,4 @@ ENV/
 # Project specific
 data/
 .env
-.env.prod
 *.log

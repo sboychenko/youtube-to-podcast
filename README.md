@@ -189,6 +189,28 @@ The project consists of two main components:
 - Rust (for building some Python packages)
 
 
+## CI/CD
+
+При пуше в `main` GitHub Actions ([.github/workflows/deploy.yml](.github/workflows/deploy.yml)) собирает Docker-образ,
+пушит его в GitHub Container Registry (`ghcr.io/sboychenko/youtube-to-podcast`) и разворачивает на VPS по SSH через
+`docker-compose`. В pull request'ах и других ветках выполняется только проверка синтаксиса и сборки образа, без
+публикации и деплоя.
+
+Для автодеплоя нужно один раз добавить в **Settings → Secrets and variables → Actions** секреты:
+
+- `REMOTE_HOST` — адрес VPS
+- `REMOTE_USER` — пользователь для SSH
+- `REMOTE_KEY` — приватный SSH-ключ (содержимое файла, не путь)
+
+Значения можно взять из `.env`, который уже используется скриптом `deploy.sh`.
+
+На сервере в `~/youtube-to-podcast-bot` должны лежать `docker-compose.yml` и `.env` (workflow их не создаёт и не
+перезаписывает, только выполняет `docker-compose pull app && docker-compose up -d`). Директория `~/youtube-to-podcast-bot/data`
+и volume `postgres_data` переживают передеплой.
+
+Ручной деплой через `deploy.sh` (сборка образа локально, `scp` + `docker load` на сервере) продолжает работать и может
+использоваться как запасной вариант, если недоступен GHCR.
+
 ## Nginx
 ```
 sudo nginx -t
