@@ -57,7 +57,7 @@ async def main():
     bot_instance = PodcastBot(
         token=token,
         domain=domain,
-        session=Session(),
+        session_factory=Session,
         admin_id=int(admin_id)
     )
 
