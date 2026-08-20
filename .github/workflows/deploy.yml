@@ -51,6 +51,25 @@ jobs:
     permissions:
       packages: read
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure deploy directory exists
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.REMOTE_KEY }}
+          script: mkdir -p ~/youtube-to-podcast-bot
+
+      - name: Copy docker-compose.yml to VPS
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.REMOTE_KEY }}
+          source: "docker-compose.yml"
+          target: "~/youtube-to-podcast-bot"
+
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1
         env:
