@@ -1,7 +1,10 @@
-from sqlalchemy import Column, Integer, String, Boolean, Text, ForeignKey, DateTime, create_engine
+from sqlalchemy import Column, Integer, String, Boolean, Text, ForeignKey, DateTime, create_engine, inspect, text
 from sqlalchemy.orm import relationship, declarative_base
 from datetime import datetime, timezone
+import logging
 import uuid
+
+logger = logging.getLogger(__name__)
 
 Base = declarative_base()
 
@@ -30,7 +33,26 @@ class Track(Base):
     description = Column(Text, nullable=True)
     user = relationship("User", back_populates="tracks")
 
+def _add_missing_columns(engine):
+    """Add columns that exist in the models but not yet in the database.
+
+    Only handles additive, nullable columns (the common case when extending a
+    model). Anything else - renames, type changes, NOT NULL/default changes,
+    dropped columns - still needs a manual entry in migrations/migration.md.
+    """
+    inspector = inspect(engine)
+    with engine.begin() as conn:
+        for table in Base.metadata.sorted_tables:
+            existing_columns = {col['name'] for col in inspector.get_columns(table.name)}
+            for column in table.columns:
+                if column.name in existing_columns:
+                    continue
+                col_type = column.type.compile(dialect=engine.dialect)
+                logger.info(f"Auto-migration: adding column {table.name}.{column.name} ({col_type})")
+                conn.execute(text(f'ALTER TABLE {table.name} ADD COLUMN {column.name} {col_type}'))
+
 def init_db(database_url):
     engine = create_engine(database_url)
     Base.metadata.create_all(engine)
-    return engine 
+    _add_missing_columns(engine)
+    return engine
