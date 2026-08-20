@@ -24,6 +24,16 @@ def get_db():
     finally:
         db.close()
 
+def build_item_description(track: Track) -> str:
+    lines = []
+    if track.channel_name:
+        lines.append(f"Канал: {track.channel_name}")
+    lines.append(f"Ссылка на видео: {track.youtube_url}")
+    if track.description:
+        lines.append("")
+        lines.append(f"Описание: {track.description}")
+    return "\n".join(lines)
+
 def create_rss_feed(user: User, tracks: list[Track], domain: str) -> str:
     rss = ET.Element("rss", version="2.0", 
                     attrib={"xmlns:itunes": "http://www.itunes.com/dtds/podcast-1.0.dtd",
@@ -56,16 +66,18 @@ def create_rss_feed(user: User, tracks: list[Track], domain: str) -> str:
         ET.SubElement(channel, "itunes:image", href=f"https://{domain}/image/{user.uuid}.jpg")
 
     for track in tracks:
+        item_description = build_item_description(track)
+
         item = ET.SubElement(channel, "item")
         ET.SubElement(item, "title").text = track.title
         ET.SubElement(item, "link").text = track.youtube_url
-        ET.SubElement(item, "description").text = f"Audio from {track.youtube_url}"
+        ET.SubElement(item, "description").text = item_description
         ET.SubElement(item, "pubDate").text = track.created_at.strftime("%a, %d %b %Y %H:%M:%S GMT")
         ET.SubElement(item, "guid").text = track.file_name
-        
+
         # iTunes специфичные теги для каждого эпизода
-        ET.SubElement(item, "itunes:author").text = f"{user.username}"
-        ET.SubElement(item, "itunes:summary").text = f"Audio from {track.youtube_url}"
+        ET.SubElement(item, "itunes:author").text = f"{track.channel_name or user.username}"
+        ET.SubElement(item, "itunes:summary").text = item_description
         ET.SubElement(item, "itunes:explicit").text = "no"
         ET.SubElement(item, "itunes:duration").text = f"{track.duration}"  # Можно добавить длительность в модель Track
         

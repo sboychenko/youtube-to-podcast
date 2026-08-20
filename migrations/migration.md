@@ -28,3 +28,18 @@ ALTER TABLE users ALTER COLUMN image TYPE varchar USING (CASE WHEN image THEN 'T
 ALTER TABLE users ALTER COLUMN image DROP NOT NULL;
 ALTER TABLE users ALTER COLUMN image DROP DEFAULT;
 ```
+
+## tracks: add channel_name, description
+
+Для более полного RSS-фида (название канала и описание видео из YouTube).
+
+```
+ALTER TABLE tracks ADD COLUMN channel_name VARCHAR;
+ALTER TABLE tracks ADD COLUMN description TEXT;
+```
+
+rollback
+```
+ALTER TABLE tracks DROP COLUMN channel_name;
+ALTER TABLE tracks DROP COLUMN description;
+```

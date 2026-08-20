@@ -352,6 +352,8 @@ class PodcastBot:
                 # Process the audio file
                 audio = mutagen.File(file_path)
                 duration = str(int(audio.info.length))
+                channel_name = info.get('channel') or info.get('uploader')
+                description = info.get('description')
 
                 # Save to database
                 track = Track(
@@ -359,7 +361,9 @@ class PodcastBot:
                     title=title,
                     youtube_url=update.message.text,
                     file_name=f"{video_id}.mp3",
-                    duration=duration
+                    duration=duration,
+                    channel_name=channel_name,
+                    description=description
                 )
                 session.add(track)
                 session.commit()

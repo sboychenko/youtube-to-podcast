@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, create_engine
+from sqlalchemy import Column, Integer, String, Boolean, Text, ForeignKey, DateTime, create_engine
 from sqlalchemy.orm import relationship, declarative_base
 from datetime import datetime, timezone
 import uuid
@@ -26,6 +26,8 @@ class Track(Base):
     file_name = Column(String, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     duration = Column(String)
+    channel_name = Column(String, nullable=True)
+    description = Column(Text, nullable=True)
     user = relationship("User", back_populates="tracks")
 
 def init_db(database_url):
