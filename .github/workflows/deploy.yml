@@ -85,6 +85,6 @@ jobs:
             set -e
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_ACTOR" --password-stdin
             cd ~/youtube-to-podcast-bot
-            docker-compose pull app
-            docker-compose up -d --remove-orphans
+            docker compose pull app
+            docker compose up -d --remove-orphans
             docker image prune -f

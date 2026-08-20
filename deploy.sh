@@ -46,13 +46,13 @@ ssh -i $REMOTE_KEY $REMOTE_USER@$REMOTE_HOST << EOF
     docker load < $IMAGE_NAME.tar.gz
     
     # Остановка и удаление старых контейнеров
-    docker-compose -f $COMPOSE_FILE down
-    
+    docker compose -f $COMPOSE_FILE down
+
     # Запуск новых контейнеров
-    docker-compose -f $COMPOSE_FILE up -d
-    
+    docker compose -f $COMPOSE_FILE up -d
+
     # Проверка статуса контейнеров
-    docker-compose -f $COMPOSE_FILE ps
+    docker compose -f $COMPOSE_FILE ps
 
     rm $IMAGE_NAME.tar.gz
     docker image prune -f
