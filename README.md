@@ -221,6 +221,15 @@ tail -f /var/log/nginx/error.log
 
 
 ## DB
+
+Физические файлы базы Postgres лежат в `./data/postgres` (bind-mount, не Docker volume) — рядом с `./data`, где
+хранятся аудио и обложки. При первом запуске каталог должен принадлежать пользователю `postgres` из образа
+`postgres:15` (uid/gid `999`), иначе контейнер упадёт с ошибкой прав доступа:
+```
+mkdir -p data/postgres
+sudo chown -R 999:999 data/postgres
+```
+
 Зайти внутрь контейнера
 Найдите имя контейнера:
 ```
