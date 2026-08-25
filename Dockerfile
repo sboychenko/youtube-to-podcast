@@ -1,11 +1,15 @@
+FROM --platform=linux/amd64 mwader/static-ffmpeg:latest AS ffmpeg
+
 FROM --platform=linux/amd64 python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    fonts-dejavu \
+# Static ffmpeg/ffprobe binaries (no shared codec libs pulled in, much smaller than apt's ffmpeg)
+COPY --from=ffmpeg /ffmpeg /ffprobe /usr/local/bin/
+
+# Install system dependencies (fonts-dejavu-core: only DejaVuSans.ttf is used, see utils.py)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first to leverage Docker cache
