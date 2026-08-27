@@ -336,7 +336,13 @@ class PodcastBot:
             try:
                 # Run the blocking download in a worker thread so it doesn't
                 # stall the event loop (bot polling and the FastAPI server).
-                info = await asyncio.to_thread(self._download_audio, ydl_opts, update.message.text)
+                # YouTube's SABR rollout makes "page needs to be reloaded" errors
+                # intermittent even on an up-to-date yt-dlp, so retry once.
+                try:
+                    info = await asyncio.to_thread(self._download_audio, ydl_opts, update.message.text)
+                except yt_dlp.utils.DownloadError:
+                    await asyncio.sleep(2)
+                    info = await asyncio.to_thread(self._download_audio, ydl_opts, update.message.text)
                 title = info['title']
                 video_id = info['id']
                 file_name = f"{video_id}.mp3"

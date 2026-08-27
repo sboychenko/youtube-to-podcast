@@ -167,6 +167,19 @@ docker-compose -f docker-compose.dev.yml down
      примонтирован в `/app/data`, перезапуск контейнера не потребуется).
    - Подробнее: [yt-dlp FAQ про cookies](https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp).
 
+5. **Ошибка `The page needs to be reloaded`**
+   - Известный баг на стороне YouTube (принудительный SABR-стриминг), из-за которого старые версии yt-dlp падают с
+     этой ошибкой; иногда ошибка остаётся нестабильной даже на свежей версии.
+   - В `requirements.txt` версия yt-dlp указана как нижняя граница (`>=`) без верхней — но GitHub Actions кэширует
+     слои Docker-сборки (`cache-from/cache-to: type=gha`), поэтому слой `pip install` может не переустанавливаться
+     месяцами, пока содержимое `requirements.txt` не изменится. Если ошибка вернулась — поднимите версию в
+     `requirements.txt` (даже на дату той же версии, что уже стоит, — главное, чтобы строка изменилась) и запушьте,
+     это форсирует пересборку с актуальным yt-dlp.
+   - Проверить версию в уже запущенном контейнере:
+     ```bash
+     docker exec -it youtube-to-podcast-bot_app_1 pip show yt-dlp
+     ```
+
 ## Использование
 
 1. Начните чат с вашим Telegram-ботом
