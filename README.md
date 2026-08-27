@@ -1,70 +1,71 @@
-# YouTube to Podcast Converter
+# YouTube в Подкаст — бот для Telegram
 
-This project converts YouTube videos to podcast episodes through a Telegram bot. It creates a personal RSS feed for each user that can be added to any podcast player.
+Проект превращает видео с YouTube в эпизоды подкаста через Telegram-бота. Для каждого пользователя создаётся
+персональная RSS-лента, которую можно добавить в любой подкаст-плеер.
 
-## Features
+## Возможности
 
-- Telegram bot for easy interaction
-- YouTube video to MP3 conversion
-- Personal RSS feed for each user
-- Track management (list, delete)
-- Docker deployment
+- Telegram-бот для удобного взаимодействия
+- Конвертация видео с YouTube в MP3
+- Персональная RSS-лента для каждого пользователя
+- Управление эпизодами (список, удаление)
+- Развёртывание в Docker
 
-## Setup
+## Установка
 
-### Docker Setup
+### Установка через Docker
 
-1. Clone the repository
-2. Copy `.env.example` to `.env` and fill in your values:
-   - `TELEGRAM_BOT_TOKEN`: Your Telegram bot token from @BotFather
-   - `DOMAIN`: Your domain name for RSS feed generation
-   - `DATABASE_URL`: PostgreSQL connection string (default is fine for local development)
+1. Склонируйте репозиторий
+2. Скопируйте `.env.example` в `.env` и заполните значения:
+   - `TELEGRAM_BOT_TOKEN` — токен вашего Telegram-бота от @BotFather
+   - `DOMAIN` — доменное имя для генерации RSS-ленты
+   - `DATABASE_URL` — строка подключения к PostgreSQL (значение по умолчанию подходит для локальной разработки)
 
-3. Build and run with Docker Compose:
+3. Соберите и запустите через Docker Compose:
 ```bash
 docker-compose up --build
 ```
 
-### Local Development Setup
+### Локальная разработка
 
-1. Clone the repository
-2. Create and activate a virtual environment with Python 3.13:
+1. Склонируйте репозиторий
+2. Создайте и активируйте виртуальное окружение с Python 3.13:
 ```bash
-# On macOS with Homebrew
+# На macOS с Homebrew
 brew install python@3.13
 python3.13 -m venv venv
 
-# On Ubuntu/Debian
+# На Ubuntu/Debian
 sudo apt-get install python3.13 python3.13-venv
 python3.13 -m venv venv
 
-# On Windows
-# Download and install Python 3.13 from https://www.python.org/downloads/
+# На Windows
+# Скачайте и установите Python 3.13 с https://www.python.org/downloads/
 python -m venv venv
 
-# Activate virtual environment
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# Активация виртуального окружения
+source venv/bin/activate  # На Windows: venv\Scripts\activate
 ```
 
-3. Install system dependencies:
+3. Установите системные зависимости:
 
-#### On macOS:
+#### На macOS:
 ```bash
-# Install Homebrew if not installed
+# Установите Homebrew, если ещё не установлен
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-# Install required packages
+# Установите необходимые пакеты
 brew install ffmpeg rust openssl
 
-# Install Docker if not installed
+# Установите Docker, если ещё не установлен
 brew install --cask docker
 
-# Set up environment variables for psycopg2 build
+# Задайте переменные окружения для сборки psycopg2
 export LDFLAGS="-L/opt/homebrew/opt/openssl@3/lib -L/opt/homebrew/opt/postgresql@15/lib"
 export CPPFLAGS="-I/opt/homebrew/opt/openssl@3/include -I/opt/homebrew/opt/postgresql@15/include"
 ```
 
-#### On Ubuntu/Debian:
+#### На Ubuntu/Debian:
 ```bash
 sudo apt-get update && sudo apt-get install -y \
     ffmpeg \
@@ -75,118 +76,118 @@ sudo apt-get update && sudo apt-get install -y \
     libpq-dev \
     libssl-dev
 
-# Install Docker if not installed
+# Установите Docker, если ещё не установлен
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 ```
 
-#### On Windows:
-- Install FFmpeg from https://ffmpeg.org/download.html
-- Install Docker Desktop from https://www.docker.com/products/docker-desktop
-- Install Rust from https://rustup.rs/
+#### На Windows:
+- Установите FFmpeg с https://ffmpeg.org/download.html
+- Установите Docker Desktop с https://www.docker.com/products/docker-desktop
+- Установите Rust с https://rustup.rs/
 
-4. Start PostgreSQL in Docker:
+4. Запустите PostgreSQL в Docker:
 ```bash
 docker-compose -f docker-compose.dev.yml up -d
 ```
 
-5. Install Python dependencies:
+5. Установите Python-зависимости:
 ```bash
-# Upgrade pip and install wheel
+# Обновите pip и установите wheel
 pip install --upgrade pip wheel
 
-# Install build tools
+# Установите инструменты сборки
 pip install --upgrade setuptools build
 
-# Install psycopg2-binary instead of psycopg2
+# Установите psycopg2-binary вместо psycopg2
 pip install psycopg2-binary
 
-# Install other dependencies
+# Установите остальные зависимости
 pip install -r requirements.txt
 ```
 
-6. Copy `.env.example` to `.env` and fill in your values:
-   - `TELEGRAM_BOT_TOKEN`: Your Telegram bot token from @BotFather
-   - `DOMAIN`: Your domain name for RSS feed generation (use `localhost:8000` for local development)
-   - `DATABASE_URL`: Use `postgresql://postgres:postgres@localhost:5432/podcast` for local development
+6. Скопируйте `.env.example` в `.env` и заполните значения:
+   - `TELEGRAM_BOT_TOKEN` — токен вашего Telegram-бота от @BotFather
+   - `DOMAIN` — доменное имя для генерации RSS-ленты (для локальной разработки используйте `localhost:8000`)
+   - `DATABASE_URL` — для локальной разработки используйте `postgresql://postgres:postgres@localhost:5432/podcast`
 
-7. Run the application:
+7. Запустите приложение:
 ```bash
 python main.py
 ```
 
-8. To stop PostgreSQL when done:
+8. Чтобы остановить PostgreSQL по завершении работы:
 ```bash
 docker-compose -f docker-compose.dev.yml down
 ```
 
-## Troubleshooting
+## Решение проблем
 
-### Common Issues
+### Частые проблемы
 
-1. **Error building psycopg2**
-   - On macOS, make sure you have set the environment variables:
+1. **Ошибка при сборке psycopg2**
+   - На macOS убедитесь, что заданы переменные окружения:
      ```bash
      export LDFLAGS="-L/opt/homebrew/opt/openssl@3/lib -L/opt/homebrew/opt/postgresql@15/lib"
      export CPPFLAGS="-I/opt/homebrew/opt/openssl@3/include -I/opt/homebrew/opt/postgresql@15/include"
      ```
-   - Try using psycopg2-binary instead:
+   - Попробуйте использовать psycopg2-binary вместо psycopg2:
      ```bash
      pip uninstall psycopg2
      pip install psycopg2-binary
      ```
-   - Make sure PostgreSQL is installed:
+   - Убедитесь, что PostgreSQL установлен:
      ```bash
      brew install postgresql@15
      ```
 
-2. **PostgreSQL connection issues**
-   - Check if PostgreSQL container is running:
+2. **Проблемы с подключением к PostgreSQL**
+   - Проверьте, запущен ли контейнер PostgreSQL:
      ```bash
      docker ps
      ```
-   - Verify connection string in .env file
-   - Try connecting with psql:
+   - Проверьте строку подключения в файле .env
+   - Попробуйте подключиться через psql:
      ```bash
      docker exec -it youtube-to-podcast-db-1 psql -U postgres -d podcast
      ```
 
-3. **FFmpeg not found**
-   - Verify FFmpeg installation:
+3. **FFmpeg не найден**
+   - Проверьте установку FFmpeg:
      ```bash
      ffmpeg -version
      ```
-   - Make sure FFmpeg is in your PATH
+   - Убедитесь, что FFmpeg добавлен в PATH
 
-## Usage
+## Использование
 
-1. Start a chat with your Telegram bot
-2. Send `/start` to create your personal feed
-3. Send any YouTube URL to convert it to a podcast episode
-4. Use `/feed` to get your RSS feed URL
-5. Use `/list` to see your episodes
-6. Use `/delete <number>` to remove an episode
+1. Начните чат с вашим Telegram-ботом
+2. Отправьте `/start`, чтобы создать свою персональную ленту
+3. Отправьте любую ссылку на YouTube, чтобы преобразовать её в эпизод подкаста
+4. Используйте `/feed`, чтобы получить URL своей RSS-ленты
+5. Используйте `/list`, чтобы посмотреть свои эпизоды
+6. Используйте `/delete <номер>`, чтобы удалить эпизод
 
-## Development
+## Разработка
 
-The project consists of two main components:
+Проект состоит из двух основных компонентов:
 
-1. Telegram Bot (`bot.py`):
-   - Handles user interactions
-   - Downloads and processes YouTube videos
-   - Manages user data and tracks
+1. Telegram-бот (`bot.py`):
+   - Обрабатывает взаимодействия с пользователем
+   - Скачивает и обрабатывает видео с YouTube
+   - Управляет данными пользователей и эпизодами
 
-2. FastAPI Server (`server.py`):
-   - Generates RSS feeds
-   - Serves audio files
-   - Handles API endpoints
+2. FastAPI-сервер (`server.py`):
+   - Генерирует RSS-ленты
+   - Раздаёт аудиофайлы
+   - Обрабатывает API-запросы
 
-## Requirements
+## Требования
 
 - Python 3.13
-- Docker and Docker Compose
+- Docker и Docker Compose
 - FFmpeg
-- Rust (for building some Python packages)
+- Rust (для сборки некоторых Python-пакетов)
 
 
 ## CI/CD
@@ -220,7 +221,7 @@ tail -f /var/log/nginx/error.log
 ```
 
 
-## DB
+## БД
 
 Физические файлы базы Postgres лежат в `./data/postgres` (bind-mount, не Docker volume) — рядом с `./data`, где
 хранятся аудио и обложки. При первом запуске каталог должен принадлежать пользователю `postgres` из образа
