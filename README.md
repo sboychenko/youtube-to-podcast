@@ -179,12 +179,18 @@ docker-compose -f docker-compose.dev.yml down
      ```bash
      docker exec -it youtube-to-podcast-bot_app_1 pip show yt-dlp
      ```
-   - Отдельная частая причина — именно комбинация с `data/cookies.txt`: с cookies yt-dlp по умолчанию выбирает
-     клиент `tv_downgraded`, который сейчас у YouTube отдаёт `UNPLAYABLE` (см.
+   - Ещё одна частая причина — комбинация с `data/cookies.txt`: с cookies yt-dlp по умолчанию выбирает клиент
+     `tv_downgraded`, который сейчас у YouTube отдаёт `UNPLAYABLE` (см.
      [yt-dlp#17389](https://github.com/yt-dlp/yt-dlp/issues/17389)). Бот уже передаёт
      `--extractor-args "youtube:player_client=default,web_embedded"` по умолчанию — это и есть рекомендованный обход.
      Если YouTube снова изменит поведение, список клиентов можно переопределить без изменения кода через переменную
      окружения `YTDLP_PLAYER_CLIENT` (через запятую, например `YTDLP_PLAYER_CLIENT=default,web_embedded,mweb`).
+   - Если verbose-вывод (`yt-dlp -v ...`) показывает `JS runtimes: none` и предупреждение `n challenge solving
+     failed` — YouTube требует решения JS-челленджа для получения рабочих ссылок на форматы, а без установленного
+     JS-движка yt-dlp не может его пройти, из-за чего у `web`-клиента отбрасываются все форматы ("YouTube is forcing
+     SABR streaming for this client"). В образ уже добавлена установка [Deno](https://deno.com) и пакета
+     `yt-dlp[default]` (включает `yt-dlp-ejs` со скриптами решения челленджа) — убедитесь, что образ пересобран
+     после этого изменения.
 
 ## Использование
 

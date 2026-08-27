@@ -8,9 +8,16 @@ WORKDIR /app
 COPY --from=ffmpeg /ffmpeg /ffprobe /usr/local/bin/
 
 # Install system dependencies (fonts-dejavu-core: only DejaVuSans.ttf is used, see utils.py)
+# curl, unzip: needed to install Deno below
 RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-dejavu-core \
+    curl \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
+
+# Deno: JS runtime yt-dlp needs to solve YouTube's "n" signature challenge
+ENV DENO_INSTALL=/usr/local
+RUN curl -fsSL https://deno.land/install.sh | sh
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
