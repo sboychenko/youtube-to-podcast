@@ -329,6 +329,10 @@ class PodcastBot:
                 'outtmpl': f'{user_dir}/%(id)s.%(ext)s',
             }
 
+            cookies_file = "data/cookies.txt"
+            if os.path.exists(cookies_file):
+                ydl_opts['cookiefile'] = cookies_file
+
             try:
                 # Run the blocking download in a worker thread so it doesn't
                 # stall the event loop (bot polling and the FastAPI server).

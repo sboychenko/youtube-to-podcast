@@ -159,6 +159,14 @@ docker-compose -f docker-compose.dev.yml down
      ```
    - Убедитесь, что FFmpeg добавлен в PATH
 
+4. **Ошибка `Sign in to confirm you're not a bot`**
+   - YouTube требует подтверждения, что запрос не от бота — обычно это происходит с IP облачных/VPS-провайдеров.
+   - Решение: экспортировать cookies из авторизованного в YouTube браузера (например, расширением
+     [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc))
+     и положить файл на сервер в `data/cookies.txt` (рядом с остальными данными пользователей — том уже
+     примонтирован в `/app/data`, перезапуск контейнера не потребуется).
+   - Подробнее: [yt-dlp FAQ про cookies](https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp).
+
 ## Использование
 
 1. Начните чат с вашим Telegram-ботом
