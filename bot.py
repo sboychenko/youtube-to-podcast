@@ -327,6 +327,14 @@ class PodcastBot:
                     'preferredquality': '192',
                 }],
                 'outtmpl': f'{user_dir}/%(id)s.%(ext)s',
+                # With cookies attached, yt-dlp defaults to the 'tv_downgraded' client,
+                # which YouTube currently serves as UNPLAYABLE ("page needs to be reloaded").
+                # web_embedded is the working fallback recommended in yt-dlp#17389.
+                'extractor_args': {
+                    'youtube': {
+                        'player_client': os.getenv('YTDLP_PLAYER_CLIENT', 'default,web_embedded').split(','),
+                    }
+                },
             }
 
             cookies_file = "data/cookies.txt"
