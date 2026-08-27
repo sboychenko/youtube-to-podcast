@@ -20,11 +20,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def get_lang(update: Update) -> str:
-    """Get user's language code or default to 'en'"""
-    return update.effective_user.language_code or 'en'
-
-
 class PodcastBot:
     def __init__(self, token: str, domain: str, session_factory: sessionmaker, admin_id: int):
         logger.info("Initializing PodcastBot...")
@@ -69,7 +64,7 @@ class PodcastBot:
                 try:
                     await self.application.bot.send_message(
                         chat_id=self.admin_id,
-                        text=get_text("en", 'start_bot'),
+                        text=get_text('start_bot'),
                         parse_mode='Markdown'
                     )
                 except Exception as e:
@@ -154,13 +149,13 @@ class PodcastBot:
             domain = os.getenv("DOMAIN")
             rss_url = f"https://{domain}/rss/{user.uuid}"
 
-            welcome_text = get_text(get_lang(update), 'welcome', rss_url=rss_url)
+            welcome_text = get_text('welcome', rss_url=rss_url)
             await update.message.reply_text(welcome_text, parse_mode='Markdown')
 
             # Notify admin about new user
             if is_new_user and self.admin_id:
                 try:
-                    admin_notification = get_text(get_lang(update), 'new_user_notification',
+                    admin_notification = get_text('new_user_notification',
                         username=update.effective_user.username or 'Unknown',
                         user_id=update.effective_user.id
                     )
@@ -180,14 +175,14 @@ class PodcastBot:
         try:
             user = session.query(User).filter_by(telegram_id=update.effective_user.id).first()
             if not user:
-                await update.message.reply_text(get_text(get_lang(update), 'start_first'))
+                await update.message.reply_text(get_text('start_first'))
                 return
 
             domain = os.getenv("DOMAIN")
             rss_url = f"https://{domain}/rss/{user.uuid}"
 
             await update.message.reply_text(
-                get_text(get_lang(update), 'feed', rss_url=rss_url),
+                get_text('feed', rss_url=rss_url),
                 parse_mode='Markdown'
             )
         finally:
@@ -199,27 +194,27 @@ class PodcastBot:
         try:
             user = session.query(User).filter_by(telegram_id=update.effective_user.id).first()
             if not user:
-                await update.message.reply_text(get_text(get_lang(update), 'start_first'))
+                await update.message.reply_text(get_text('start_first'))
                 return
 
             tracks = session.query(Track).filter_by(user_id=user.id).order_by(Track.created_at.desc()).all()
             if not tracks:
                 await update.message.reply_text(
-                    get_text(get_lang(update), 'list_empty'),
+                    get_text('list_empty'),
                     parse_mode='Markdown'
                 )
                 return
 
             tracks_text = []
             for i, track in enumerate(tracks, 1):
-                tracks_text.append(get_text(get_lang(update), 'track_item',
+                tracks_text.append(get_text('track_item',
                     number=i,
                     title=track.title,
                     url=track.youtube_url
                 ))
 
             await update.message.reply_text(
-                get_text(get_lang(update), 'list', tracks='\n'.join(tracks_text)),
+                get_text('list', tracks='\n'.join(tracks_text)),
                 parse_mode='Markdown',
                 disable_web_page_preview=True
             )
@@ -232,13 +227,13 @@ class PodcastBot:
         try:
             user = session.query(User).filter_by(telegram_id=update.effective_user.id).first()
             if not user:
-                await update.message.reply_text(get_text(get_lang(update), 'start_first'))
+                await update.message.reply_text(get_text('start_first'))
                 return
 
             tracks = session.query(Track).filter_by(user_id=user.id).order_by(Track.created_at.desc()).all()
             if not tracks:
                 await update.message.reply_text(
-                    get_text(get_lang(update), 'list_empty'),
+                    get_text('list_empty'),
                     parse_mode='Markdown'
                 )
                 return
@@ -251,7 +246,7 @@ class PodcastBot:
                     tracks_text.append(f"{i}. {track.title}")
 
                 await update.message.reply_text(
-                    get_text(get_lang(update), 'delete_invalid', tracks='\n'.join(tracks_text)),
+                    get_text('delete_invalid', tracks='\n'.join(tracks_text)),
                     parse_mode='Markdown'
                 )
                 return
@@ -262,7 +257,7 @@ class PodcastBot:
                     tracks_text.append(f"{i}. {track.title}")
 
                 await update.message.reply_text(
-                    get_text(get_lang(update), 'delete_invalid_number', tracks='\n'.join(tracks_text)),
+                    get_text('delete_invalid_number', tracks='\n'.join(tracks_text)),
                     parse_mode='Markdown'
                 )
                 return
@@ -278,7 +273,7 @@ class PodcastBot:
             session.commit()
 
             await update.message.reply_text(
-                get_text(get_lang(update), 'delete_success', title=track.title),
+                get_text('delete_success', title=track.title),
                 parse_mode='Markdown'
             )
         finally:
@@ -290,12 +285,12 @@ class PodcastBot:
         try:
             user = session.query(User).filter_by(telegram_id=update.effective_user.id).first()
             if not user:
-                await update.message.reply_text(get_text(get_lang(update), 'start_first'))
+                await update.message.reply_text(get_text('start_first'))
                 return
 
             context.user_data['waiting_for_image'] = True
             await update.message.reply_text(
-                get_text(get_lang(update), 'setimage_prompt'),
+                get_text('setimage_prompt'),
                 parse_mode='Markdown'
             )
         finally:
@@ -314,10 +309,10 @@ class PodcastBot:
         try:
             user = session.query(User).filter_by(telegram_id=update.effective_user.id).first()
             if not user:
-                await update.message.reply_text(get_text(get_lang(update), 'start_first'))
+                await update.message.reply_text(get_text('start_first'))
                 return
 
-            await update.message.reply_text(get_text(get_lang(update), 'download_start'))
+            await update.message.reply_text(get_text('download_start'))
 
             # Create user directory if it doesn't exist
             user_dir = f"data/{user.uuid}"
@@ -346,7 +341,7 @@ class PodcastBot:
                 # Check if the original file exists
                 if not os.path.exists(file_path):
                     logger.error(f"Original file not found: {file_path}")
-                    await update.message.reply_text(get_text(get_lang(update), 'download_error', error="Downloaded file not found"))
+                    await update.message.reply_text(get_text('download_error', error="Downloaded file not found"))
                     return
 
                 # Process the audio file
@@ -368,10 +363,10 @@ class PodcastBot:
                 session.add(track)
                 session.commit()
 
-                await update.message.reply_text(get_text(get_lang(update), 'download_success', title=title))
+                await update.message.reply_text(get_text('download_success', title=title))
             except Exception as e:
                 logger.error(f"Error processing video: {e}", exc_info=True)
-                await update.message.reply_text(get_text(get_lang(update), 'download_error', error=str(e)))
+                await update.message.reply_text(get_text('download_error', error=str(e)))
         finally:
             session.close()
 
@@ -384,7 +379,7 @@ class PodcastBot:
         try:
             user = session.query(User).filter_by(telegram_id=update.effective_user.id).first()
             if not user:
-                await update.message.reply_text(get_text(get_lang(update), 'start_first'))
+                await update.message.reply_text(get_text('start_first'))
                 return
 
             try:
@@ -399,7 +394,7 @@ class PodcastBot:
 
                 if success:
                     await update.message.reply_text(
-                        get_text(get_lang(update), 'setimage_success'),
+                        get_text('setimage_success'),
                         parse_mode='Markdown'
                     )
                 else:
@@ -408,7 +403,7 @@ class PodcastBot:
             except Exception as e:
                 logger.error(f"Error setting image: {e}", exc_info=True)
                 await update.message.reply_text(
-                    get_text(get_lang(update), 'setimage_error'),
+                    get_text('setimage_error'),
                     parse_mode='Markdown'
                 )
             finally:
@@ -423,11 +418,11 @@ class PodcastBot:
         try:
             user = session.query(User).filter_by(telegram_id=update.effective_user.id).first()
             if not user:
-                await update.message.reply_text(get_text(get_lang(update), 'start_first'))
+                await update.message.reply_text(get_text('start_first'))
                 return
 
             await update.message.reply_text(
-                get_text(get_lang(update), 'help'),
+                get_text('help'),
                 parse_mode='Markdown',
                 disable_web_page_preview=True
             )
@@ -456,7 +451,7 @@ class PodcastBot:
                 # Calculate total disk space used using utility function
                 total_size = calculate_user_storage(user.uuid)
 
-                stats.append(get_text(get_lang(update), 'stats_item',
+                stats.append(get_text('stats_item',
                     username=escaped_username,
                     user_id=user.telegram_id,
                     track_count=track_count,
@@ -464,11 +459,11 @@ class PodcastBot:
                 ))
 
             if not stats:
-                await update.message.reply_text(get_text(get_lang(update), 'no_users'))
+                await update.message.reply_text(get_text('no_users'))
                 return
 
             await update.message.reply_text(
-                get_text(get_lang(update), 'stats', stats='\n'.join(stats)),
+                get_text('stats', stats='\n'.join(stats)),
                 parse_mode='Markdown'
             )
         finally:
